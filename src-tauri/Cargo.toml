@@ -28,4 +28,5 @@ image = "0.25"
 # winapi = { version = "0.3", features = ["winuser", "shellapi", "comctl32", "wingdi"] }
 chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1.0", features = ["v4", "serde"] }
+rfd = "0.15"
 
