@@ -21,15 +21,27 @@ function App() {
     try {
       setLoading(true);
       
+      console.log('开始初始化数据...');
+      console.log('window.__TAURI__:', (window as any).__TAURI__);
+      console.log('document.readyState:', document.readyState);
+      
       // 等待Tauri API初始化
-      await new Promise(resolve => setTimeout(resolve, 100));
+      console.log('等待Tauri API初始化...');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      console.log('Tauri API初始化完成，检查可用性...');
+      console.log('window.__TAURI__ after wait:', (window as any).__TAURI__);
       
       // 初始化数据管理器
+      console.log('初始化数据管理器...');
       await dataService.initializeDataManager();
       
       // 加载分类和快捷方式
+      console.log('加载分类和快捷方式...');
       await loadCategories();
       await loadShortcuts();
+      
+      console.log('数据初始化完成');
     } catch (error) {
       console.error('初始化数据失败:', error);
       toast.error('初始化应用失败');

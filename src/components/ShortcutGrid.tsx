@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
-import { Plus, Upload, FolderOpen } from 'lucide-react';
+import React, { useState, useCallback } from 'react';
+import { Plus, Upload, FolderOpen, Package } from 'lucide-react';
 import { Shortcut } from '../types';
 import ShortcutItem from './ShortcutItem';
-import { useDragAndDrop } from '../hooks/useDragAndDrop';
+
+import DragDropZone from './DragDropZone';
+import BatchFileProcessor from './BatchFileProcessor';
 import { DataService } from '../services/dataService';
 import { toast } from 'sonner';
 
@@ -23,17 +25,19 @@ const ShortcutGrid: React.FC<ShortcutGridProps> = ({
   dataService,
   onShortcutAdded
 }) => {
-  const { isDragOver, isProcessing, dragHandlers } = useDragAndDrop({
-    categoryId,
-    dataService,
-    onFileAdded: () => {
-      if (onShortcutAdded) {
-        onShortcutAdded();
-      }
+  // 使用useCallback优化onFileAdded回调，避免无限重新渲染
+  const handleFileAdded = useCallback((filePath: string) => {
+    console.log('[ShortcutGrid] DragDropZone onFileAdded回调被触发', filePath);
+    if (onShortcutAdded) {
+      console.log('[ShortcutGrid] 调用onShortcutAdded');
+      onShortcutAdded();
+    } else {
+      console.log('[ShortcutGrid] onShortcutAdded未定义');
     }
-  });
+  }, [onShortcutAdded]);
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isBatchProcessorOpen, setIsBatchProcessorOpen] = useState(false);
   const [isAddingShortcut, setIsAddingShortcut] = useState(false);
   const [shortcutForm, setShortcutForm] = useState({
     name: '',
@@ -168,40 +172,96 @@ const ShortcutGrid: React.FC<ShortcutGridProps> = ({
   };
 
   return (
-    <div
-      className={`p-6 min-h-full transition-colors ${isDragOver ? 'bg-blue-50 border-2 border-dashed border-blue-400' : ''
-        }`}
-      {...dragHandlers}
-    >
-      {/* 拖拽覆盖层 */}
-      {isDragOver && (
-        <div className="fixed inset-0 bg-blue-500 bg-opacity-20 flex items-center justify-center z-50 pointer-events-none">
-          <div className="bg-white rounded-lg p-8 shadow-lg text-center">
-            <Upload className="w-16 h-16 text-blue-500 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">
-              释放以添加快捷方式
-            </h3>
-            <p className="text-gray-600">
-              将文件拖拽到这里创建快捷方式
-            </p>
+    <div className="p-6 min-h-full">
+      {/* 批量处理器对话框 */}
+      {isBatchProcessorOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+              <h2 className="text-xl font-semibold">批量文件处理器</h2>
+              <button
+                onClick={() => setIsBatchProcessorOpen(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto">
+              <BatchFileProcessor
+                categoryId={categoryId}
+                dataService={dataService}
+                onComplete={(successCount, errorCount) => {
+                  setIsBatchProcessorOpen(false);
+                  if (onShortcutAdded) {
+                    onShortcutAdded();
+                  }
+                  toast.success(`批量处理完成: 成功 ${successCount} 个，失败 ${errorCount} 个`);
+                }}
+              />
+            </div>
           </div>
         </div>
       )}
 
-      {/* 处理中覆盖层 */}
-      {isProcessing && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-8 shadow-lg text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">
-              正在处理文件...
-            </h3>
-            <p className="text-gray-600">
-              请稍候，正在创建快捷方式
-            </p>
+      {/* 使用DragDropZone组件 */}
+      <DragDropZone
+        categoryId={categoryId}
+        dataService={dataService}
+        onFileAdded={handleFileAdded}
+      >
+        {/* 工具栏 */}
+        <div className="flex justify-between items-center mb-4">
+          <div className="flex space-x-2">
+            <button
+              onClick={handleAddShortcut}
+              className="flex items-center px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              添加快捷方式
+            </button>
+            <button
+              onClick={() => setIsBatchProcessorOpen(true)}
+              className="flex items-center px-3 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors"
+            >
+              <Package className="w-4 h-4 mr-2" />
+              批量处理
+            </button>
+          </div>
+          <div className="text-sm text-gray-500">
+            共 {shortcuts.length} 个快捷方式
           </div>
         </div>
-      )}
+
+        <div className="grid grid-cols-4 gap-4">
+          {/* 现有快捷方式 */}
+          {shortcuts.map((shortcut) => (
+            <ShortcutItem
+              key={shortcut.id}
+              shortcut={shortcut}
+              onDoubleClick={onShortcutDoubleClick}
+              onDelete={onShortcutDelete}
+            />
+          ))}
+
+          {/* 空状态提示 */}
+          {shortcuts.length === 0 && (
+            <div className="col-span-4 text-center py-12">
+              <div className="text-gray-400 mb-4">
+                <Upload className="w-16 h-16 mx-auto mb-4 opacity-50" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-600 mb-2">
+                还没有快捷方式
+              </h3>
+              <p className="text-gray-500 mb-4">
+                拖拽文件到这里或点击上方按钮来添加快捷方式
+              </p>
+              <div className="text-sm text-gray-400">
+                支持拖拽各种文件类型：exe、pdf、txt、目录等
+              </div>
+            </div>
+          )}
+        </div>
+      </DragDropZone>
 
       {/* 添加快捷方式对话框 */}
       {isDialogOpen && (
@@ -279,46 +339,7 @@ const ShortcutGrid: React.FC<ShortcutGridProps> = ({
         </div>
       )}
 
-      <div className="grid grid-cols-4 gap-4">
-        {/* 现有快捷方式 */}
-        {shortcuts.map((shortcut) => (
-          <ShortcutItem
-            key={shortcut.id}
-            shortcut={shortcut}
-            onDoubleClick={onShortcutDoubleClick}
-            onDelete={onShortcutDelete}
-          />
-        ))}
 
-        {/* 添加新快捷方式按钮 */}
-        <div
-          className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors group"
-          onClick={handleAddShortcut}
-        >
-          <Plus className="w-8 h-8 text-gray-400 group-hover:text-blue-500 mb-2" />
-          <span className="text-sm text-gray-500 group-hover:text-blue-600">
-            添加快捷方式
-          </span>
-        </div>
-
-        {/* 空状态提示 */}
-        {shortcuts.length === 0 && (
-          <div className="col-span-4 text-center py-12">
-            <div className="text-gray-400 mb-4">
-              <Upload className="w-16 h-16 mx-auto mb-4 opacity-50" />
-            </div>
-            <h3 className="text-lg font-medium text-gray-600 mb-2">
-              还没有快捷方式
-            </h3>
-            <p className="text-gray-500 mb-4">
-              拖拽文件到这里或点击上方按钮来添加快捷方式
-            </p>
-            <div className="text-sm text-gray-400">
-              支持拖拽 .exe、.lnk、.bat 等可执行文件
-            </div>
-          </div>
-        )}
-      </div>
     </div>
   );
 };

@@ -3,15 +3,29 @@ import { Shortcut, Category, CreateShortcutRequest, UpdateShortcutRequest, Creat
 
 // 获取invoke函数，优先使用导入的，如果不可用则使用全局的
 const getInvoke = () => {
+  console.log('getInvoke called, checking invoke availability');
+  console.log('invoke type:', typeof invoke);
+  console.log('invoke value:', invoke);
+  
   if (typeof invoke !== 'undefined' && invoke !== null) {
+    console.log('Using imported invoke function');
     return invoke;
   }
   
   // 使用全局Tauri API作为备选
-  if (typeof window !== 'undefined' && (window as any).__TAURI__ && (window as any).__TAURI__.core && (window as any).__TAURI__.core.invoke) {
-    return (window as any).__TAURI__.core.invoke;
+  if (typeof window !== 'undefined' && (window as any).__TAURI__) {
+    console.log('Checking global __TAURI__ object:', (window as any).__TAURI__);
+    if ((window as any).__TAURI__.core && (window as any).__TAURI__.core.invoke) {
+      console.log('Using global __TAURI__.core.invoke');
+      return (window as any).__TAURI__.core.invoke;
+    }
+    if ((window as any).__TAURI__.invoke) {
+      console.log('Using global __TAURI__.invoke');
+      return (window as any).__TAURI__.invoke;
+    }
   }
   
+  console.error('Tauri invoke function not available');
   throw new Error('Tauri invoke function not available');
 };
 
@@ -34,8 +48,16 @@ export class DataService {
   }
 
   async createShortcut(request: CreateShortcutRequest): Promise<Shortcut> {
+    console.log('[DataService] createShortcut调用', { request });
     const invokeFunc = getInvoke();
-    return await invokeFunc('create_shortcut', { request });
+    try {
+      const result = await invokeFunc('create_shortcut', { request });
+      console.log('[DataService] createShortcut成功', { result });
+      return result;
+    } catch (error) {
+      console.error('[DataService] createShortcut失败', { error, request });
+      throw error;
+    }
   }
 
   async updateShortcut(id: string, request: UpdateShortcutRequest): Promise<Shortcut> {
@@ -81,23 +103,123 @@ export class DataService {
 
   // 文件操作
   async validateFilePath(path: string): Promise<boolean> {
+    console.log('[DataService] validateFilePath调用', { path });
     const invokeFunc = getInvoke();
-    return await invokeFunc('validate_file_path_command', { filePath: path });
+    try {
+      const result = await invokeFunc('validate_file_path_command', { filePath: path });
+      console.log('[DataService] validateFilePath结果', { path, result });
+      return result;
+    } catch (error) {
+      console.error('[DataService] validateFilePath失败', { error, path });
+      throw error;
+    }
+  }
+
+  async validateDirectoryPath(path: string): Promise<boolean> {
+    console.log('[DataService] validateDirectoryPath调用', { path });
+    const invokeFunc = getInvoke();
+    try {
+      const result = await invokeFunc('validate_directory_path_command', { directoryPath: path });
+      console.log('[DataService] validateDirectoryPath结果', { path, result });
+      return result;
+    } catch (error) {
+      console.error('[DataService] validateDirectoryPath失败', { error, path });
+      throw error;
+    }
   }
 
   async getFileInfo(path: string): Promise<FileInfo> {
+    console.log('[DataService] getFileInfo调用', { path });
     const invokeFunc = getInvoke();
-    return await invokeFunc('get_file_info_command', { filePath: path });
+    try {
+      const result = await invokeFunc('get_file_info_command', { filePath: path });
+      console.log('[DataService] getFileInfo结果', { path, result });
+      return result;
+    } catch (error) {
+      console.error('[DataService] getFileInfo失败', { error, path });
+      throw error;
+    }
   }
 
-  async getFileIcon(path: string): Promise<IconResult> {
+  async getPathInfo(path: string): Promise<FileInfo> {
+    console.log('[DataService] getPathInfo调用', { path });
     const invokeFunc = getInvoke();
-    return await invokeFunc('get_file_icon_command', { file_path: path });
+    try {
+      const result = await invokeFunc('get_path_info_command', { path });
+      console.log('[DataService] getPathInfo结果', { path, result });
+      return result;
+    } catch (error) {
+      console.error('[DataService] getPathInfo失败', { error, path });
+      throw error;
+    }
+  }
+
+  async getFileIcon(path: string, largeIcon: boolean = false): Promise<IconResult> {
+    console.log('[DataService] getFileIcon调用', { path, largeIcon });
+    const invokeFunc = getInvoke();
+    try {
+      const result = await invokeFunc('get_file_icon_command', { filePath: path, large_icon: largeIcon });
+      console.log('[DataService] getFileIcon结果', { path, result });
+      return result;
+    } catch (error) {
+      console.error('[DataService] getFileIcon失败', { error, path, largeIcon });
+      throw error;
+    }
+  }
+
+  async getDirectoryIcon(path: string, largeIcon: boolean = false): Promise<IconResult> {
+    console.log('[DataService] getDirectoryIcon调用', { path, largeIcon });
+    const invokeFunc = getInvoke();
+    try {
+      const result = await invokeFunc('get_directory_icon_command', { directoryPath: path, large_icon: largeIcon });
+      console.log('[DataService] getDirectoryIcon结果', { path, result });
+      return result;
+    } catch (error) {
+      console.error('[DataService] getDirectoryIcon失败', { error, path, largeIcon });
+      throw error;
+    }
+  }
+
+  async getIconsBatch(paths: string[], largeIcon: boolean = false): Promise<{ [path: string]: IconResult }> {
+    console.log('[DataService] getIconsBatch调用', { paths, largeIcon });
+    const invokeFunc = getInvoke();
+    try {
+      const result = await invokeFunc('get_icons_batch_command', { paths, large_icon: largeIcon });
+      console.log('[DataService] getIconsBatch结果', { paths, result });
+      return result;
+    } catch (error) {
+      console.error('[DataService] getIconsBatch失败', { error, paths, largeIcon });
+      throw error;
+    }
   }
 
   async checkFileExists(path: string): Promise<boolean> {
+    console.log('[DataService] checkFileExists调用', { path });
     const invokeFunc = getInvoke();
-    return await invokeFunc('check_file_exists_command', { filePath: path });
+    try {
+      const result = await invokeFunc('check_file_exists_command', { filePath: path });
+      console.log('[DataService] checkFileExists结果', { path, result });
+      return result;
+    } catch (error) {
+      console.error('[DataService] checkFileExists失败', { error, path });
+      throw error;
+    }
+  }
+
+  // 缓存管理
+  async clearIconCache(): Promise<string> {
+    const invokeFunc = getInvoke();
+    return await invokeFunc('clear_icon_cache');
+  }
+
+  async getCacheStats(): Promise<any> {
+    const invokeFunc = getInvoke();
+    return await invokeFunc('get_cache_stats');
+  }
+
+  async preloadIcons(filePaths: string[]): Promise<string> {
+    const invokeFunc = getInvoke();
+    return await invokeFunc('preload_icons', { file_paths: filePaths });
   }
 
   // 打开文件选择对话框
