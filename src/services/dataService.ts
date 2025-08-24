@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import { Shortcut, Category, CreateShortcutRequest, UpdateShortcutRequest, CreateCategoryRequest, UpdateCategoryRequest, FileInfo } from '../types';
+import { Shortcut, Category, CreateShortcutRequest, UpdateShortcutRequest, CreateCategoryRequest, UpdateCategoryRequest, FileInfo, IconResult } from '../types';
 
 // 获取invoke函数，优先使用导入的，如果不可用则使用全局的
 const getInvoke = () => {
@@ -90,9 +90,9 @@ export class DataService {
     return await invokeFunc('get_file_info_command', { filePath: path });
   }
 
-  async getFileIcon(path: string): Promise<string> {
+  async getFileIcon(path: string): Promise<IconResult> {
     const invokeFunc = getInvoke();
-    return await invokeFunc('get_file_icon_command', { filePath: path });
+    return await invokeFunc('get_file_icon_command', { file_path: path });
   }
 
   async checkFileExists(path: string): Promise<boolean> {
