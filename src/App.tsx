@@ -1,67 +1,197 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
-import "./App.css";
-import { Button } from "@/components/ui/button"
+import { useState, useEffect } from 'react';
+import { Shortcut, Category } from './types';
+import CategorySidebar from './components/CategorySidebar';
+import ShortcutGrid from './components/ShortcutGrid';
+import { DataService } from './services/dataService';
+import { toast } from 'sonner';
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+  const [shortcuts, setShortcuts] = useState<Shortcut[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('default');
+  const [loading, setLoading] = useState(true);
+  const [dataService] = useState(() => new DataService());
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
+  // 初始化数据
+  useEffect(() => {
+    initializeData();
+  }, []);
+
+  const initializeData = async () => {
+    try {
+      setLoading(true);
+      
+      // 等待Tauri API初始化
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // 初始化数据管理器
+      await dataService.initializeDataManager();
+      
+      // 加载分类和快捷方式
+      await loadCategories();
+      await loadShortcuts();
+    } catch (error) {
+      console.error('初始化数据失败:', error);
+      toast.error('初始化应用失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadCategories = async () => {
+    try {
+      const categoriesData = await dataService.getCategories();
+      setCategories(categoriesData);
+      
+      // 如果没有选中的分类或选中的分类不存在，选择第一个分类
+      if (!selectedCategoryId || !categoriesData.find(c => c.id === selectedCategoryId)) {
+        if (categoriesData.length > 0) {
+          setSelectedCategoryId(categoriesData[0].id);
+        }
+      }
+    } catch (error) {
+      console.error('加载分类失败:', error);
+      toast.error('加载分类失败');
+    }
+  };
+
+  const loadShortcuts = async () => {
+    try {
+      const shortcutsData = await dataService.getShortcuts();
+      setShortcuts(shortcutsData);
+    } catch (error) {
+      console.error('加载快捷方式失败:', error);
+      toast.error('加载快捷方式失败');
+    }
+  };
+
+  // 获取当前分类的快捷方式
+  const getCurrentCategoryShortcuts = () => {
+    return shortcuts.filter(shortcut => shortcut.category_id === selectedCategoryId);
+  };
+
+  // 处理快捷方式双击
+  const handleShortcutDoubleClick = async (shortcut: Shortcut) => {
+    try {
+      await dataService.launchShortcut(shortcut.id);
+      toast.success(`启动 ${shortcut.name}`);
+      
+      // 重新加载快捷方式以更新使用次数
+      await loadShortcuts();
+    } catch (error) {
+      console.error('启动快捷方式失败:', error);
+      toast.error(`启动 ${shortcut.name} 失败`);
+    }
+  };
+
+  // 处理快捷方式删除
+  const handleShortcutDelete = async (shortcutId: string) => {
+    try {
+      await dataService.deleteShortcut(shortcutId);
+      toast.success('快捷方式已删除');
+      await loadShortcuts();
+    } catch (error) {
+      console.error('删除快捷方式失败:', error);
+      toast.error('删除快捷方式失败');
+    }
+  };
+
+  // 处理分类选择
+  const handleCategorySelect = (categoryId: string) => {
+    setSelectedCategoryId(categoryId);
+  };
+
+  // 处理分类创建
+  const handleCategoryCreate = async (name: string) => {
+    try {
+      await dataService.createCategory({ name, description: '' });
+      toast.success('分类创建成功');
+      await loadCategories();
+    } catch (error) {
+      console.error('创建分类失败:', error);
+      toast.error('创建分类失败');
+    }
+  };
+
+  // 处理分类更新
+  const handleCategoryUpdate = async (categoryId: string, name: string) => {
+    try {
+      await dataService.updateCategory(categoryId, { name });
+      toast.success('分类更新成功');
+      await loadCategories();
+    } catch (error) {
+      console.error('更新分类失败:', error);
+      toast.error('更新分类失败');
+    }
+  };
+
+  // 处理分类删除
+  const handleCategoryDelete = async (categoryId: string) => {
+    try {
+      await dataService.deleteCategory(categoryId);
+      toast.success('分类删除成功');
+      await loadCategories();
+      
+      // 如果删除的是当前选中的分类，切换到第一个分类
+      if (categoryId === selectedCategoryId && categories.length > 1) {
+        const remainingCategories = categories.filter(c => c.id !== categoryId);
+        if (remainingCategories.length > 0) {
+          setSelectedCategoryId(remainingCategories[0].id);
+        }
+      }
+    } catch (error) {
+      console.error('删除分类失败:', error);
+      toast.error('删除分类失败');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">加载中...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-  <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col items-center justify-center p-4">
-    <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full space-y-6">
-      <h1 className="text-3xl font-bold text-center text-gray-800 mb-8">
-        Welcome to Tauri + React
-      </h1>
-
-      <div className="flex justify-center items-center space-x-8 mb-8">
-        <a href="https://vite.dev" target="_blank" className="transform hover:scale-110 transition-transform duration-200">
-          <img src="/vite.svg" className="w-16 h-16 drop-shadow-lg" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank" className="transform hover:scale-110 transition-transform duration-200">
-          <img src="/tauri.svg" className="w-16 h-16 drop-shadow-lg" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank" className="transform hover:scale-110 transition-transform duration-200">
-          <img src={reactLogo} className="w-16 h-16 drop-shadow-lg" alt="React logo" />
-        </a>
-      </div>
+    <div className="h-screen flex bg-white">
+      {/* 分类侧边栏 */}
+      <CategorySidebar
+        categories={categories}
+        selectedCategoryId={selectedCategoryId}
+        onCategorySelect={handleCategorySelect}
+        onCategoryCreate={handleCategoryCreate}
+        onCategoryUpdate={handleCategoryUpdate}
+        onCategoryDelete={handleCategoryDelete}
+      />
       
-      <p className="text-gray-600 text-center mb-8">
-        Click on the Tauri, Vite, and React logos to learn more.
-      </p>
-
-      <form
-        className="space-y-4"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200"
-        />
-        <Button onClick={greet} className="w-full">
-          Greet
-        </Button>
-
-      </form>
-      
-      <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-        <p className="text-center text-gray-700 break-words">{greetMsg}</p>
+      {/* 主内容区域 */}
+      <div className="flex-1 flex flex-col">
+        {/* 标题栏 */}
+        <div className="p-4 border-b border-gray-200">
+          <h1 className="text-2xl font-bold text-gray-800">智能快捷启动器</h1>
+          <p className="text-sm text-gray-600 mt-1">
+            当前分类: {categories.find(c => c.id === selectedCategoryId)?.name || '未知'}
+          </p>
+        </div>
+        
+        {/* 快捷方式网格 */}
+        <div className="flex-1 overflow-y-auto">
+          <ShortcutGrid
+            shortcuts={getCurrentCategoryShortcuts()}
+            onShortcutDoubleClick={handleShortcutDoubleClick}
+            onShortcutDelete={handleShortcutDelete}
+            categoryId={selectedCategoryId}
+            dataService={dataService}
+            onShortcutAdded={loadShortcuts}
+          />
+        </div>
       </div>
     </div>
-  </main>
-);
-
+  );
 }
 
 export default App;
