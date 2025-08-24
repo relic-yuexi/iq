@@ -4,6 +4,7 @@ use crate::utils::*;
 use tauri::{AppHandle, State};
 use std::sync::Mutex;
 use std::collections::HashMap;
+use rfd::AsyncFileDialog;
 
 // 全局数据管理器状态
 pub type DataManagerState = Mutex<Option<DataManager>>;
@@ -17,6 +18,22 @@ pub async fn initialize_data_manager(app_handle: AppHandle, state: State<'_, Dat
     *manager_guard = Some(manager);
     
     Ok(())
+}
+
+// 打开文件选择对话框
+#[tauri::command]
+pub async fn open_file_dialog(app_handle: AppHandle) -> Result<String, String> {
+    let dialog = AsyncFileDialog::new()
+        .add_filter("可执行文件", &["exe", "bat", "cmd", "ps1", "lnk"])
+        .add_filter("所有文件", &["*"])
+        .set_title("选择要添加的文件");
+    
+    let file_result = dialog.pick_file().await;
+    
+    match file_result {
+        Some(file) => Ok(file.path().to_string_lossy().to_string()),
+        None => Err("用户取消了文件选择".to_string()),
+    }
 }
 
 // 获取所有快捷方式
@@ -107,11 +124,15 @@ pub async fn launch_shortcut(id: String, state: State<'_, DataManagerState>) -> 
         .find(|s| s.id == id)
         .ok_or("Shortcut not found")?;
     
+    let shortcut_path = shortcut.file_path.clone();
+    
+    // 释放数据引用，避免借用检查问题
+    drop(data);
+    
     // 启动文件
-    crate::utils::launch_file(&shortcut.file_path)?;
+    crate::utils::launch_file(&shortcut_path)?;
     
     // 增加使用次数
-    drop(data); // 释放不可变引用
     manager.increment_usage(&id)?;
     
     Ok(())
@@ -330,9 +351,7 @@ pub async fn get_popular_shortcuts(limit: Option<usize>, state: State<'_, DataMa
 // 备份数据
 #[tauri::command]
 pub async fn backup_data(state: State<'_, DataManagerState>) -> Result<(), String> {
-    let manager_guard = state.lock().map_err(|e| format!("Failed to lock state: {}", e))?;
-    
-    let manager = manager_guard.as_ref().ok_or("Data manager not initialized")?;
+    let _manager_guard = state.lock().map_err(|e| format!("Failed to lock state: {}", e))?;
     
     // 这里需要访问storage，但DataManager没有公开storage
     // 简化实现：直接返回成功

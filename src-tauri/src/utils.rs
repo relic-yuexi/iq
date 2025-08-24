@@ -2,7 +2,7 @@ use crate::models::{FileInfo, IconResult};
 use std::fs;
 use std::path::Path;
 use chrono::{DateTime, Utc};
-use base64;
+use base64::{Engine as _, engine::general_purpose};
 
 // Windows图标提取功能暂时禁用
 // #[cfg(target_os = "windows")]
@@ -58,8 +58,44 @@ pub fn get_file_info(file_path: &str) -> Result<FileInfo, String> {
 }
 
 pub fn validate_file_path(file_path: &str) -> Result<bool, String> {
+    // 检查路径是否为空
+    if file_path.is_empty() {
+        return Err("File path is empty".to_string());
+    }
+    
+    // 检查路径是否包含非法字符
+    #[cfg(target_os = "windows")]
+    {
+        // Windows路径中允许冒号（:）因为驱动器符号需要它，比如 C:\
+        // 但是不允许其他非法字符
+        let invalid_chars = ['<', '>', '"', '|', '?', '*'];
+        for &ch in &invalid_chars {
+            if file_path.contains(ch) {
+                return Err(format!("File path contains invalid character: {}", ch));
+            }
+        }
+        
+        // 检查路径格式是否合法（简单的驱动器路径检查）
+        if file_path.len() >= 2 && file_path.chars().nth(1).unwrap() == ':' {
+            let drive_letter = file_path.chars().next().unwrap();
+            if !drive_letter.is_ascii_alphabetic() {
+                return Err("Invalid drive letter in path".to_string());
+            }
+        }
+    }
+    
+    // 检查路径是否存在
     let path = Path::new(file_path);
-    Ok(path.exists() && path.is_file())
+    if !path.exists() {
+        return Err("File does not exist".to_string());
+    }
+    
+    // 检查是否是文件
+    if !path.is_file() {
+        return Err("Path is not a file".to_string());
+    }
+    
+    Ok(true)
 }
 
 pub fn check_file_exists(file_path: &str) -> Result<bool, String> {
@@ -78,7 +114,7 @@ pub fn extract_file_icon(file_path: &str, _large_icon: bool) -> Result<IconResul
     let default_icon = get_default_icon_for_extension(extension);
     
     Ok(IconResult {
-        icon_data: base64::encode(default_icon.as_bytes()),
+        icon_data: general_purpose::STANDARD.encode(default_icon.as_bytes()),
         icon_format: "text".to_string(),
         from_cache: false,
         file_hash: None,
