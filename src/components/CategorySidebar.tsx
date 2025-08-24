@@ -72,8 +72,26 @@ export const CategorySidebar: React.FC<CategorySidebarProps> = ({
   };
 
   const handleDelete = (categoryId: string) => {
-    if (onCategoryDelete && confirm('确定要删除这个分类吗？')) {
-      onCategoryDelete(categoryId);
+    console.log('handleDelete called with categoryId:', categoryId);
+    console.log('onCategoryDelete function:', onCategoryDelete);
+    
+    // 添加更详细的调试信息
+    const category = categories.find(c => c.id === categoryId);
+    console.log('Found category:', category);
+    
+    if (onCategoryDelete) {
+      console.log('Calling confirm dialog...');
+      const userConfirmed = confirm('确定要删除这个分类吗？');
+      console.log('User confirmed:', userConfirmed);
+      
+      if (userConfirmed) {
+        console.log('User confirmed deletion, calling onCategoryDelete...');
+        onCategoryDelete(categoryId);
+      } else {
+        console.log('User cancelled deletion');
+      }
+    } else {
+      console.log('onCategoryDelete is not available');
     }
   };
 
@@ -212,6 +230,8 @@ export const CategorySidebar: React.FC<CategorySidebarProps> = ({
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
+                        e.preventDefault();
+                        console.log('Delete button clicked for category:', category.id);
                         handleDelete(category.id);
                       }}
                       className="h-6 w-6 p-0 text-red-500 hover:text-red-700"

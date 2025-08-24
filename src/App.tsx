@@ -104,7 +104,7 @@ function App() {
   // 处理分类创建
   const handleCategoryCreate = async (name: string) => {
     try {
-      await dataService.createCategory({ name, description: '' });
+      await dataService.createCategory({ name });
       toast.success('分类创建成功');
       await loadCategories();
     } catch (error) {

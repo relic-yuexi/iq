@@ -46,9 +46,9 @@ export const ShortcutItem: React.FC<ShortcutItemProps> = ({
       
       {/* 图标 */}
       <div className="flex justify-center mb-2">
-        {shortcut.icon_data ? (
+        {shortcut.icon_path ? (
           <img 
-            src={shortcut.icon_data} 
+            src={shortcut.icon_path} 
             alt={shortcut.name}
             className="w-12 h-12 object-contain"
             onError={(e) => {
@@ -60,7 +60,7 @@ export const ShortcutItem: React.FC<ShortcutItemProps> = ({
           />
         ) : null}
         <FileIcon 
-          className={`w-12 h-12 text-blue-500 ${shortcut.icon_data ? 'hidden' : ''}`} 
+          className={`w-12 h-12 text-blue-500 ${shortcut.icon_path ? 'hidden' : ''}`} 
         />
       </div>
       
@@ -69,11 +69,7 @@ export const ShortcutItem: React.FC<ShortcutItemProps> = ({
         <p className="text-sm font-medium truncate" title={shortcut.name}>
           {shortcut.name}
         </p>
-        {shortcut.description && (
-          <p className="text-xs text-gray-500 truncate mt-1" title={shortcut.description}>
-            {shortcut.description}
-          </p>
-        )}
+
       </div>
       
       {/* 使用次数显示 */}

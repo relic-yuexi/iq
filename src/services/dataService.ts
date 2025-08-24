@@ -40,7 +40,7 @@ export class DataService {
 
   async updateShortcut(id: string, request: UpdateShortcutRequest): Promise<Shortcut> {
     const invokeFunc = getInvoke();
-    return await invokeFunc('update_shortcut', { id, request });
+    return await invokeFunc('update_shortcut', { id, ...request });
   }
 
   async deleteShortcut(id: string): Promise<void> {
@@ -71,7 +71,7 @@ export class DataService {
 
   async updateCategory(id: string, request: UpdateCategoryRequest): Promise<Category> {
     const invokeFunc = getInvoke();
-    return await invokeFunc('update_category', { id, request });
+    return await invokeFunc('update_category', { id, ...request });
   }
 
   async deleteCategory(id: string): Promise<void> {
@@ -82,22 +82,28 @@ export class DataService {
   // 文件操作
   async validateFilePath(path: string): Promise<boolean> {
     const invokeFunc = getInvoke();
-    return await invokeFunc('validate_file_path_command', { path });
+    return await invokeFunc('validate_file_path_command', { filePath: path });
   }
 
   async getFileInfo(path: string): Promise<FileInfo> {
     const invokeFunc = getInvoke();
-    return await invokeFunc('get_file_info_command', { path });
+    return await invokeFunc('get_file_info_command', { filePath: path });
   }
 
   async getFileIcon(path: string): Promise<string> {
     const invokeFunc = getInvoke();
-    return await invokeFunc('get_file_icon_command', { path });
+    return await invokeFunc('get_file_icon_command', { filePath: path });
   }
 
   async checkFileExists(path: string): Promise<boolean> {
     const invokeFunc = getInvoke();
-    return await invokeFunc('check_file_exists_command', { path });
+    return await invokeFunc('check_file_exists_command', { filePath: path });
+  }
+
+  // 打开文件选择对话框
+  async openFileDialog(): Promise<string> {
+    const invokeFunc = getInvoke();
+    return await invokeFunc('open_file_dialog');
   }
 
   // 搜索和统计
@@ -119,12 +125,12 @@ export class DataService {
   // 批量操作
   async updateShortcutsSortOrder(shortcutIds: string[]): Promise<void> {
     const invokeFunc = getInvoke();
-    await invokeFunc('update_shortcuts_sort_order', { shortcutIds });
+    await invokeFunc('update_shortcuts_order', { updates: shortcutIds.map((id, index) => [id, index]) });
   }
 
   async updateCategoriesSortOrder(categoryIds: string[]): Promise<void> {
     const invokeFunc = getInvoke();
-    await invokeFunc('update_categories_sort_order', { categoryIds });
+    await invokeFunc('update_categories_order', { updates: categoryIds.map((id, index) => [id, index]) });
   }
 
   // 数据备份和恢复
@@ -141,12 +147,12 @@ export class DataService {
   // 配置管理
   async getConfig(): Promise<any> {
     const invokeFunc = getInvoke();
-    return await invokeFunc('get_config');
+    return await invokeFunc('get_app_config');
   }
 
   async updateConfig(config: any): Promise<void> {
     const invokeFunc = getInvoke();
-    await invokeFunc('update_config', { config });
+    await invokeFunc('update_app_config', config);
   }
 
   async resetConfig(): Promise<void> {

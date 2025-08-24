@@ -85,8 +85,7 @@ export const useDragAndDrop = ({ onFileAdded, categoryId, dataService }: UseDrag
 
           // 创建快捷方式
           const shortcut = await dataService.createShortcut({
-            name: fileInfo.name.replace(/\.[^/.]+$/, ''), // 移除文件扩展名
-            description: `${fileInfo.name} - ${Math.round(fileInfo.size / 1024)}KB`,
+            name: fileInfo.file_name.replace(/\.[^/.]+$/, ''), // 移除文件扩展名
             file_path: filePath,
             icon_path: iconPath,
             category_id: categoryId
