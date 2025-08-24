@@ -58,9 +58,17 @@ pub fn get_file_info(file_path: &str) -> Result<FileInfo, String> {
 }
 
 pub fn validate_file_path(file_path: &str) -> Result<bool, String> {
+    validate_path(file_path, false)
+}
+
+pub fn validate_directory_path(dir_path: &str) -> Result<bool, String> {
+    validate_path(dir_path, true)
+}
+
+pub fn validate_path(file_path: &str, is_directory: bool) -> Result<bool, String> {
     // 检查路径是否为空
     if file_path.is_empty() {
-        return Err("File path is empty".to_string());
+        return Err("Path is empty".to_string());
     }
     
     // 检查路径是否包含非法字符
@@ -71,7 +79,7 @@ pub fn validate_file_path(file_path: &str) -> Result<bool, String> {
         let invalid_chars = ['<', '>', '"', '|', '?', '*'];
         for &ch in &invalid_chars {
             if file_path.contains(ch) {
-                return Err(format!("File path contains invalid character: {}", ch));
+                return Err(format!("Path contains invalid character: {}", ch));
             }
         }
         
@@ -87,12 +95,18 @@ pub fn validate_file_path(file_path: &str) -> Result<bool, String> {
     // 检查路径是否存在
     let path = Path::new(file_path);
     if !path.exists() {
-        return Err("File does not exist".to_string());
+        return Err("Path does not exist".to_string());
     }
     
-    // 检查是否是文件
-    if !path.is_file() {
-        return Err("Path is not a file".to_string());
+    // 根据类型检查
+    if is_directory {
+        if !path.is_dir() {
+            return Err("Path is not a directory".to_string());
+        }
+    } else {
+        if !path.is_file() {
+            return Err("Path is not a file".to_string());
+        }
     }
     
     Ok(true)
@@ -103,22 +117,9 @@ pub fn check_file_exists(file_path: &str) -> Result<bool, String> {
     Ok(path.exists())
 }
 
-// Windows图标提取功能暂时使用占位实现
-pub fn extract_file_icon(file_path: &str, _large_icon: bool) -> Result<IconResult, String> {
-    // 根据文件扩展名返回默认图标
-    let path = std::path::Path::new(file_path);
-    let extension = path.extension()
-        .and_then(|ext| ext.to_str())
-        .unwrap_or("");
-    
-    let default_icon = get_default_icon_for_extension(extension);
-    
-    Ok(IconResult {
-        icon_data: general_purpose::STANDARD.encode(default_icon.as_bytes()),
-        icon_format: "text".to_string(),
-        from_cache: false,
-        file_hash: None,
-    })
+// 使用新的图标提取模块
+pub fn extract_file_icon(file_path: &str, large_icon: bool) -> Result<IconResult, String> {
+    crate::icon_extractor::extract_file_icon(file_path, large_icon)
 }
 
 // icon_to_base64函数暂时使用占位实现

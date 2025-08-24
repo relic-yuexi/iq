@@ -200,7 +200,44 @@ pub fn get_file_info_command(file_path: String) -> Result<FileInfo, String> {
 // 获取文件图标
 #[tauri::command]
 pub fn get_file_icon_command(file_path: String, large_icon: Option<bool>) -> Result<IconResult, String> {
-    crate::utils::extract_file_icon(&file_path, large_icon.unwrap_or(true))
+    crate::icon_cache::get_cached_icon(&file_path, large_icon.unwrap_or(false))
+}
+
+// 获取目录图标
+#[tauri::command]
+pub fn get_directory_icon_command(directory_path: String, large_icon: Option<bool>) -> Result<IconResult, String> {
+    crate::icon_cache::get_cached_icon(&directory_path, large_icon.unwrap_or(false))
+}
+
+// 批量获取图标
+#[tauri::command]
+pub fn get_icons_batch_command(file_paths: Vec<String>, large_icon: Option<bool>) -> Result<Vec<(String, IconResult)>, String> {
+    let results = crate::icon_extractor::extract_icons_batch(file_paths, large_icon.unwrap_or(true));
+    
+    // 过滤出成功的结果
+    let successful_results: Vec<(String, IconResult)> = results
+        .into_iter()
+        .filter_map(|(path, result)| {
+            match result {
+                Ok(icon) => Some((path, icon)),
+                Err(_) => None, // 忽略失败的结果
+            }
+        })
+        .collect();
+    
+    Ok(successful_results)
+}
+
+// 验证目录路径
+#[tauri::command]
+pub fn validate_directory_path_command(dir_path: String) -> Result<bool, String> {
+    crate::utils::validate_directory_path(&dir_path)
+}
+
+// 获取路径信息（支持文件和目录）
+#[tauri::command]
+pub fn get_path_info_command(path: String) -> Result<FileInfo, String> {
+    crate::utils::get_file_info(&path)
 }
 
 // 检查文件状态
@@ -368,4 +405,24 @@ pub async fn reload_data(state: State<'_, DataManagerState>) -> Result<(), Strin
     manager.reload_data()?;
     
     Ok(())
+}
+
+// 清空图标缓存
+#[tauri::command]
+pub fn clear_icon_cache() -> Result<String, String> {
+    crate::icon_cache::GLOBAL_ICON_CACHE.clear()?;
+    Ok("Icon cache cleared successfully".to_string())
+}
+
+// 获取缓存统计信息
+#[tauri::command]
+pub fn get_cache_stats() -> Result<crate::icon_cache::CacheStats, String> {
+    crate::icon_cache::GLOBAL_ICON_CACHE.get_stats()
+}
+
+// 预加载图标
+#[tauri::command]
+pub fn preload_icons(file_paths: Vec<String>) -> Result<String, String> {
+    crate::icon_cache::GLOBAL_ICON_CACHE.preload_icons(file_paths)?;
+    Ok("Icons preloaded successfully".to_string())
 }

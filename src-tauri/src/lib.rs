@@ -2,6 +2,8 @@ mod models;
 mod storage;
 mod utils;
 mod commands;
+mod icon_extractor;
+mod icon_cache;
 
 use commands::*;
 use std::sync::Mutex;
@@ -34,8 +36,12 @@ pub fn run() {
             update_category,
             delete_category,
             validate_file_path_command,
+            validate_directory_path_command,
             get_file_info_command,
+            get_path_info_command,
             get_file_icon_command,
+            get_directory_icon_command,
+            get_icons_batch_command,
             check_file_exists_command,
             get_app_config,
             update_app_config,
@@ -45,7 +51,10 @@ pub fn run() {
             get_recent_shortcuts,
             get_popular_shortcuts,
             backup_data,
-            reload_data
+            reload_data,
+            clear_icon_cache,
+            get_cache_stats,
+            preload_icons
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
