@@ -71,28 +71,34 @@ export const CategorySidebar: React.FC<CategorySidebarProps> = ({
     setNewCategoryName('');
   };
 
-  const handleDelete = (categoryId: string) => {
-    console.log('handleDelete called with categoryId:', categoryId);
-    console.log('onCategoryDelete function:', onCategoryDelete);
-    
-    // 添加更详细的调试信息
-    const category = categories.find(c => c.id === categoryId);
-    console.log('Found category:', category);
+  const handleDelete = async (categoryId: string) => {
+    console.log('=== handleDelete 函数开始 ===');
+    console.log('传入的 categoryId:', categoryId);
+    console.log('onCategoryDelete 函数是否存在:', !!onCategoryDelete);
     
     if (onCategoryDelete) {
-      console.log('Calling confirm dialog...');
-      const userConfirmed = confirm('确定要删除这个分类吗？');
-      console.log('User confirmed:', userConfirmed);
+      console.log('开始查找分类...');
+      const category = categories.find(c => c.id === categoryId);
+      const categoryName = category?.name || '未知分类';
+      console.log('找到的分类:', category);
+      console.log('分类名称:', categoryName);
+      
+      console.log('准备显示确认对话框...');
+      // 使用更明确的确认对话框
+      const userConfirmed = await window.confirm(`确定要删除分类"${categoryName}"吗？\n\n删除后该分类下的所有快捷方式也将被删除，此操作不可撤销。`);
+      console.log('用户确认结果:', userConfirmed);
       
       if (userConfirmed) {
-        console.log('User confirmed deletion, calling onCategoryDelete...');
+        console.log('用户确认删除，调用 onCategoryDelete...');
         onCategoryDelete(categoryId);
+        console.log('onCategoryDelete 调用完成');
       } else {
-        console.log('User cancelled deletion');
+        console.log('用户取消删除');
       }
     } else {
-      console.log('onCategoryDelete is not available');
+      console.log('onCategoryDelete 函数不存在，无法删除');
     }
+    console.log('=== handleDelete 函数结束 ===');
   };
 
   return (
@@ -228,11 +234,21 @@ export const CategorySidebar: React.FC<CategorySidebarProps> = ({
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={(e) => {
+                      onClick={async (e) => {
+                        console.log('=== 删除按钮点击事件开始 ===');
+                        console.log('事件对象:', e);
+                        console.log('当前分类ID:', category.id);
+                        console.log('当前分类名称:', category.name);
+                        
                         e.stopPropagation();
+                        console.log('事件冒泡已阻止');
+                        
                         e.preventDefault();
-                        console.log('Delete button clicked for category:', category.id);
-                        handleDelete(category.id);
+                        console.log('默认行为已阻止');
+                        
+                        console.log('准备调用 handleDelete...');
+                        await handleDelete(category.id);
+                        console.log('=== 删除按钮点击事件结束 ===');
                       }}
                       className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
                     >
